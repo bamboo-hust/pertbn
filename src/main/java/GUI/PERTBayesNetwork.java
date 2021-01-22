@@ -10,6 +10,7 @@ import jxl.read.biff.BiffException;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -154,68 +155,99 @@ public class PERTBayesNetwork extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed  Kết quả
-          if(projectFilePath != null){
-              final ArrayList<Task> luuTask= new ArrayList<Task>();
-              new Thread(new Runnable() {
-                  @Override
-                  public void run() {
-                      try {
-                          System.out.println(projectFilePath);
-                          Workbook workbook;
-                          workbook  = Workbook.getWorkbook(new File(projectFilePath));
-                          // get sheet want read
-                          Sheet sheet = workbook.getSheet(0);
-                          // get number row and col contain data
-                          int rows = sheet.getRows();
-                          System.out.println(sheet.getRows());
-                          System.out.println("Reading data in file.......");
-                          // read data in each cell
-                          for (int row = 1; row < rows; row++) {
-                              String riskFile = "./probability" + rand(1, numFiles) +".bin";
-                              String name = sheet.getCell(1, row).getContents();
-                              int optimistic = Integer.parseInt(sheet.getCell(2, row).getContents());
-                              int mostlikely = Integer.parseInt(sheet.getCell(3, row).getContents());
-                              int pessimistic = Integer.parseInt(sheet.getCell(4, row).getContents());
-                              InitialDurationNodes duration = new InitialDurationNodes();
-                              duration.innitTotalDuration(Double.valueOf(optimistic),Double.valueOf(mostlikely),Double.valueOf(pessimistic),riskFile);
-                              Task task = new Task(name, riskFile, duration.getEstimatedDuration(), duration.getTotalDuration());
-                              luuTask.add(task);
-                          }
-                          for(int row = 1; row < rows ; row++){
-                              String predecessor = sheet.getCell(5,row).getContents();
-                              for(int i=0;i<luuTask.size();i++){
-                                  if(predecessor.contains(luuTask.get(i).name)){
-                                      luuTask.get(i).getChilds().add(luuTask.get(row-1));
-                                  }
-                              }
-                          }
+        System.out.println("Ket qua PERT clicked");
+        String prefix = "/home/lad/tvcuong/";
+        for (int id = 1; id <= 2; ++id) {
+            projectFilePath = prefix + "pert" + id + ".xls";
+            if (projectFilePath != null) {
+                final ArrayList<Task> luuTask = new ArrayList<Task>();
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+                        try {
+                            System.out.println(projectFilePath);
+                            Workbook workbook;
+                            workbook = Workbook.getWorkbook(new File(projectFilePath));
+                            // get sheet want read
+                            Sheet sheet = workbook.getSheet(0);
+                            // get number row and col contain data
+                            int rows = sheet.getRows();
+                            System.out.println(sheet.getRows());
+                            System.out.println("Reading data in file.......");
+                            // read data in each cell
+                            for (int row = 1; row < rows; row++) {
+                                String riskFile = "./probability" + rand(1, numFiles) + ".bin";
+                                String name = sheet.getCell(1, row).getContents();
+                                int optimistic = Integer.parseInt(sheet.getCell(2, row).getContents());
+                                int mostlikely = Integer.parseInt(sheet.getCell(3, row).getContents());
+                                int pessimistic = Integer.parseInt(sheet.getCell(4, row).getContents());
+                                InitialDurationNodes duration = new InitialDurationNodes();
+                                duration.innitTotalDuration(Double.valueOf(optimistic), Double.valueOf(mostlikely), Double.valueOf(pessimistic), riskFile);
+                                Task task = new Task(name, riskFile, duration.getEstimatedDuration(), duration.getTotalDuration());
+                                luuTask.add(task);
+                            }
+                            for (int row = 1; row < rows; row++) {
+                                String predecessor = sheet.getCell(5, row).getContents();
+                                for (int i = 0; i < luuTask.size(); i++) {
+                                    if (predecessor.contains(luuTask.get(i).name)) {
+                                        luuTask.get(i).getChilds().add(luuTask.get(row - 1));
+                                    }
+                                }
+                            }
 
-                          HashSet<Task> allTasks = new HashSet<Task>();
-                          for (int i = 0; i < luuTask.size(); i++) {
-                              allTasks.add(luuTask.get(i));
-                          }
-                          TimeCalculation tc = new TimeCalculation(allTasks);
+                            HashSet<Task> allTasks = new HashSet<Task>();
+                            for (int i = 0; i < luuTask.size(); i++) {
+                                allTasks.add(luuTask.get(i));
+                            }
+                            TimeCalculation tc = new TimeCalculation(allTasks);
 
-                          tc.run();
-                          ArrayList<Task> lastTask = tc.lastTask((HashSet<Task>) tc.tasks);
+                            tc.run();
+                            ArrayList<Task> lastTask = tc.lastTask((HashSet<Task>) tc.tasks);
+                            //System.out.println(lastTask);
+                            ArrayList<ArrayList<Double>> distribution = tc.duLieu(lastTask.get(0));
+                            System.out.println(distribution);
+                            FileWriter outfile = new FileWriter("dist" + id + ".txt");
+                            ArrayList<Double> f = new ArrayList<>();
+                            f.add((double) 0);
+                            int last_x = 0;
+                            double last_f = 0;
+                            for (ArrayList<Double> each : distribution) {
+                                int cur_x = each.get(0).intValue();
+                                double cur_f = each.get(1);
+                                double portion = (cur_f - last_f) / (cur_x - last_x);
+                                for (int i = last_x + 1; i <= cur_x; ++i) {
+                                    f.add(portion);
+                                }
+                                last_x = cur_x;
+                                last_f = cur_f;
+                                // outfile.write(each.get(0) + " " + each.get(1) + "\n");
+                            }
+                            f.add(100 - last_f);
+                            for (int i = 0; i < f.size(); ++i) {
+                                f.set(i, f.get(i) / 100.0);
+                            }
+                            for (int i = 0; i < f.size(); ++i) {
+                                outfile.write(i + " " + f.get(i) + '\n');
+                            }
+                            outfile.close();
+                            JFrame fame = new JFrame();
+                            Result re = new Result(lastTask);
+                            fame.add(re);
+                            fame.setVisible(true);
+                            fame.setSize(450, 450);
+                            // close
+                            workbook.close();
+                        } catch (IOException ex) {
+                            Logger.getLogger(PERTBayesNetwork.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (BiffException ex) {
+                            Logger.getLogger(PERTBayesNetwork.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+//                    }
+//                }).start();
 
-                          JFrame fame = new JFrame();
-                          Result re = new Result(lastTask);
-                          fame.add(re);
-                          fame.setVisible(true);
-                          fame.setSize(450,450);
-                          // close
-                          workbook.close();
-                      } catch (IOException ex) {
-                          Logger.getLogger(PERTBayesNetwork.class.getName()).log(Level.SEVERE, null, ex);
-                      } catch (BiffException ex) {
-                          Logger.getLogger(PERTBayesNetwork.class.getName()).log(Level.SEVERE, null, ex);
-                      }
-                  }
-              }).start();
 
-             
-          }
+            }
+        }
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
