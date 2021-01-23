@@ -156,8 +156,8 @@ public class PERTBayesNetwork extends javax.swing.JFrame {
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed  Kết quả
         System.out.println("Ket qua PERT clicked");
-        String prefix = "/home/lad/tvcuong/";
-        for (int id = 1; id <= 2; ++id) {
+        String prefix = "/home/quanglm1998/school/kinh_te_cnpm/pertbn/data/";
+        for (int id = 1; id <= 12; ++id) {
             projectFilePath = prefix + "pert" + id + ".xls";
             if (projectFilePath != null) {
                 final ArrayList<Task> luuTask = new ArrayList<Task>();
@@ -172,6 +172,9 @@ public class PERTBayesNetwork extends javax.swing.JFrame {
                             Sheet sheet = workbook.getSheet(0);
                             // get number row and col contain data
                             int rows = sheet.getRows();
+                            while (rows > 1 && sheet.getCell(0, rows - 1).getContents().isEmpty()) {
+                                rows--;
+                            }
                             System.out.println(sheet.getRows());
                             System.out.println("Reading data in file.......");
                             // read data in each cell
@@ -206,7 +209,7 @@ public class PERTBayesNetwork extends javax.swing.JFrame {
                             //System.out.println(lastTask);
                             ArrayList<ArrayList<Double>> distribution = tc.duLieu(lastTask.get(0));
                             System.out.println(distribution);
-                            FileWriter outfile = new FileWriter("dist" + id + ".txt");
+                            FileWriter outfile = new FileWriter("out/dist" + id + ".txt");
                             ArrayList<Double> f = new ArrayList<>();
                             f.add((double) 0);
                             int last_x = 0;
@@ -227,7 +230,9 @@ public class PERTBayesNetwork extends javax.swing.JFrame {
                                 f.set(i, f.get(i) / 100.0);
                             }
                             for (int i = 0; i < f.size(); ++i) {
-                                outfile.write(i + " " + f.get(i) + '\n');
+                                Double now = f.get(i);
+                                // now = Double.parseDouble(String.format("%.10f", now));
+                                outfile.write(i + " " + now + '\n');
                             }
                             outfile.close();
                             JFrame fame = new JFrame();
